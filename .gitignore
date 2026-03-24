@@ -40,6 +40,15 @@ dist/
 build/
 tmp/
 
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Compiled Go binaries in backend
+backend/server
+backend/seed
+
 # Task spec files
 Первое практическое задание.txt
 Прил_1_ОЗ_КОД 09.02.07-2-2026-М1.txt
