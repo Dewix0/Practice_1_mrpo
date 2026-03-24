@@ -20,7 +20,7 @@ type AuthService struct {
 func NewAuthService(repo *repository.UserRepo) *AuthService {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "dev-secret-key"
+		secret = "dev-secret-key" //nolint:gosec
 	}
 	return &AuthService{
 		UserRepo:  repo,

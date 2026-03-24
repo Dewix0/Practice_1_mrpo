@@ -67,7 +67,7 @@ func RequireAuth() func(http.Handler) http.Handler {
 			if !IsAuthenticated(r.Context()) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -89,7 +89,7 @@ func RequireRole(roles ...string) func(http.Handler) http.Handler {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusForbidden)
-			json.NewEncoder(w).Encode(map[string]string{"error": "forbidden"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "forbidden"})
 		})
 	}
 }

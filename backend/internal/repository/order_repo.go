@@ -129,7 +129,7 @@ func (r *OrderRepo) Create(input model.OrderInput) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("order create begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	res, err := tx.Exec(`
 		INSERT INTO orders (order_date, delivery_date, pickup_code, status_id, pickup_point_id, user_id)
@@ -164,7 +164,7 @@ func (r *OrderRepo) Update(id int64, input model.OrderInput) error {
 	if err != nil {
 		return fmt.Errorf("order update begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	_, err = tx.Exec(`
 		UPDATE orders SET order_date=?, delivery_date=?, pickup_code=?, status_id=?, pickup_point_id=?, user_id=?

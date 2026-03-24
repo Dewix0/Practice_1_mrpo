@@ -1,0 +1,26 @@
+run:
+  timeout: 3m
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+    - bodyclose
+    - goconst
+    - misspell
+
+linters-settings:
+  gosec:
+    excludes:
+      - G104  # unhandled errors on deferred Close() calls are ok
+
+issues:
+  exclude-rules:
+    - path: cmd/seed/main.go
+      linters:
+        - gosec  # seed command has intentional string concatenation for SQL

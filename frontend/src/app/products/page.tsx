@@ -32,6 +32,7 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     const params = new URLSearchParams();
     if (filters.search) params.set("search", filters.search);
