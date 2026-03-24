@@ -118,7 +118,7 @@ frontend/
 | Поле | Тип | Описание |
 |------|-----|----------|
 | id | INTEGER PK | Автоинкремент |
-| order_date | TEXT NOT NULL | Дата заказа |
+| order_date | TEXT | Дата заказа (NULL при невалидных данных из импорта) |
 | delivery_date | TEXT | Дата доставки/выдачи (может быть NULL) |
 | pickup_code | TEXT | Код для получения (напр. "901") |
 | status_id | INTEGER FK | → order_statuses.id |
