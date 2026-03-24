@@ -32,6 +32,10 @@ func main() {
 	productService := service.NewProductService(productRepo, "uploads")
 	productHandler := handler.NewProductHandler(productService)
 
+	orderRepo := repository.NewOrderRepo(db)
+	orderService := service.NewOrderService(orderRepo)
+	orderHandler := handler.NewOrderHandler(orderService)
+
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -65,6 +69,20 @@ func main() {
 			r.Put("/{id}", productHandler.Update)
 			r.Delete("/{id}", productHandler.Delete)
 			r.Post("/{id}/image", productHandler.UploadImage)
+		})
+	})
+
+	// Order routes
+	r.Route("/api/orders", func(r chi.Router) {
+		r.Use(middleware.RequireRole("manager", "admin"))
+		r.Get("/", orderHandler.List)
+		r.Get("/{id}", orderHandler.GetByID)
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequireRole("admin"))
+			r.Post("/", orderHandler.Create)
+			r.Put("/{id}", orderHandler.Update)
+			r.Delete("/{id}", orderHandler.Delete)
 		})
 	})
 
