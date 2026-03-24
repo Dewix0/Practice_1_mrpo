@@ -57,3 +57,4 @@ backend/seed
 # Claude
 CLAUDE.md
 .superpowers/
+docs/
