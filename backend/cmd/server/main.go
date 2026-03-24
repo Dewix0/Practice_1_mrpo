@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -15,7 +16,11 @@ import (
 )
 
 func main() {
-	db, err := database.Open("data.db")
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "data.db"
+	}
+	db, err := database.Open(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,7 +34,11 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 
 	productRepo := repository.NewProductRepo(db)
-	productService := service.NewProductService(productRepo, "uploads")
+	uploadsDir := os.Getenv("UPLOADS_DIR")
+	if uploadsDir == "" {
+		uploadsDir = "uploads"
+	}
+	productService := service.NewProductService(productRepo, uploadsDir)
 	productHandler := handler.NewProductHandler(productService)
 
 	orderRepo := repository.NewOrderRepo(db)
@@ -105,7 +114,7 @@ func main() {
 	})
 
 	// Static file server for uploads
-	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
 	log.Println("Server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
