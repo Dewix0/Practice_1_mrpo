@@ -36,6 +36,9 @@ func main() {
 	orderService := service.NewOrderService(orderRepo)
 	orderHandler := handler.NewOrderHandler(orderService)
 
+	refRepo := repository.NewReferenceRepo(db)
+	refHandler := handler.NewReferenceHandler(refRepo)
+
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -84,6 +87,21 @@ func main() {
 			r.Put("/{id}", orderHandler.Update)
 			r.Delete("/{id}", orderHandler.Delete)
 		})
+	})
+
+	// Reference data routes (auth required)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAuth())
+		r.Get("/api/categories", refHandler.Categories)
+		r.Get("/api/manufacturers", refHandler.Manufacturers)
+		r.Get("/api/units", refHandler.Units)
+		r.Get("/api/pickup-points", refHandler.PickupPoints)
+		r.Get("/api/order-statuses", refHandler.OrderStatuses)
+	})
+	// Suppliers (manager+ only)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireRole("manager", "admin"))
+		r.Get("/api/suppliers", refHandler.Suppliers)
 	})
 
 	// Static file server for uploads
