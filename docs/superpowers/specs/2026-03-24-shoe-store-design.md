@@ -32,7 +32,7 @@ backend/
   │   ├── repository/     # SQL запросы
   │   ├── model/          # структуры данных
   │   ├── middleware/      # JWT, CORS, роли
-  │   └── database/       # миграции, подключение
+  │   └── database/       # миграции, подключение, seed
   ├── uploads/            # фото товаров
   ├── go.mod
   └── go.sum
@@ -59,8 +59,8 @@ frontend/
 | Поле | Тип | Описание |
 |------|-----|----------|
 | id | INTEGER PK | Автоинкремент |
-| login | TEXT NOT NULL | Логин |
-| password | TEXT NOT NULL | Хеш пароля |
+| login | TEXT NOT NULL | Логин (email) |
+| password | TEXT NOT NULL | bcrypt-хеш пароля |
 | last_name | TEXT | Фамилия |
 | first_name | TEXT | Имя |
 | patronymic | TEXT | Отчество |
@@ -70,12 +70,15 @@ frontend/
 | Поле | Тип | Описание |
 |------|-----|----------|
 | id | INTEGER PK | Автоинкремент |
-| name | TEXT NOT NULL | guest / client / manager / admin |
+| name | TEXT NOT NULL | client / manager / admin |
+
+Роль "гость" — это отсутствие аутентификации, в таблице roles не хранится. Импортные роли: "Администратор", "Менеджер", "Авторизированный клиент" → admin, manager, client.
 
 ### products
 | Поле | Тип | Описание |
 |------|-----|----------|
 | id | INTEGER PK | Автоинкремент |
+| article | TEXT NOT NULL UNIQUE | Артикул (напр. "А112Т4") |
 | name | TEXT NOT NULL | Наименование |
 | description | TEXT | Описание |
 | price | REAL NOT NULL | Цена (≥ 0, с копейками) |
@@ -116,9 +119,13 @@ frontend/
 |------|-----|----------|
 | id | INTEGER PK | Автоинкремент |
 | order_date | TEXT NOT NULL | Дата заказа |
-| issue_date | TEXT | Дата выдачи (может быть NULL) |
+| delivery_date | TEXT | Дата доставки/выдачи (может быть NULL) |
+| pickup_code | TEXT | Код для получения (напр. "901") |
 | status_id | INTEGER FK | → order_statuses.id |
 | pickup_point_id | INTEGER FK | → pickup_points.id |
+| user_id | INTEGER FK | → users.id (клиент, оформивший заказ) |
+
+Примечание: в ТЗ модуль 4 использует термин "дата выдачи", в импортных данных — "дата доставки". Это одно и то же поле, в БД `delivery_date`.
 
 ### order_items
 | Поле | Тип | Описание |
@@ -183,7 +190,8 @@ Query-параметры GET /api/products:
 |------|--------|
 | /api/categories | auth |
 | /api/manufacturers | auth |
-| /api/suppliers | public |
+| /api/suppliers | manager+ |
+| /api/units | auth |
 | /api/pickup-points | auth |
 | /api/order-statuses | auth |
 
@@ -221,6 +229,8 @@ Query-параметры GET /api/products:
 | /orders/new | Добавить заказ | admin |
 | /orders/[id]/edit | Редактировать заказ | admin |
 
+Каждая страница задаёт `<title>` через Next.js metadata, соответствующий назначению (по ТЗ: "Заголовок окна должен соответствовать назначению").
+
 ## Стиль (по ТЗ)
 
 - **Шрифт**: Times New Roman
@@ -237,11 +247,29 @@ Query-параметры GET /api/products:
 ## UI-компоненты (Ant Design)
 
 - **Layout**: хедер (#7FFF00) с логотипом, навигацией, ФИО + кнопка выхода
+- **Навигация**: кнопка "Назад" на формах добавления/редактирования (по ТЗ: "перемещаться между существующими окнами, в том числе обратно")
 - **Каталог**: кастомный список (не Table) — карточки товаров с условным стилем
 - **Тулбар**: Input.Search + Select (поставщик) + кнопки сортировки — видны менеджеру и админу
-- **Форма товара**: Form + Input, InputNumber, Select, Upload, TextArea
-- **Список заказов**: Table с колонками (артикул, статус, пункт выдачи, даты)
-- **Форма заказа**: Form + Select, DatePicker
+- **Форма товара**:
+  - name → Input
+  - article → Input (при добавлении скрыт, при редактировании read-only)
+  - category → Select (dropdown, данные из /api/categories)
+  - manufacturer → Select (dropdown, данные из /api/manufacturers)
+  - supplier → Select (dropdown, данные из /api/suppliers)
+  - description → TextArea
+  - price → InputNumber (≥ 0, step 0.01)
+  - discount → InputNumber (≥ 0)
+  - quantity → InputNumber (≥ 0, целое)
+  - unit → Select (dropdown, данные из /api/units)
+  - image → Upload (фото товара)
+- **Список заказов**: Table с колонками (артикулы товаров, статус, пункт выдачи, дата заказа, дата доставки)
+- **Форма заказа**:
+  - status → Select (dropdown, данные из /api/order-statuses)
+  - pickup_point → Select (dropdown, данные из /api/pickup-points)
+  - order_date → DatePicker
+  - delivery_date → DatePicker
+  - pickup_code → Input (auto или ручной)
+  - **Позиции заказа** → динамический список (Form.List): выбор товара по артикулу (Select) + количество (InputNumber). Можно добавлять/удалять строки.
 - **Ошибки**: notification / Modal с заголовком, иконкой, информативным текстом
 
 ## Валидация и бизнес-правила
@@ -271,6 +299,7 @@ Query-параметры GET /api/products:
 
 ### Аутентификация
 - JWT в httpOnly cookie
+- Пароли хешируются через bcrypt (seed-скрипт хеширует пароли из Excel при импорте)
 - JWT истёк → 401 → фронт редиректит на /login
 - Роль не позволяет → 403, UI скрывает недоступные элементы заранее
 
@@ -285,12 +314,24 @@ Query-параметры GET /api/products:
 
 ## Импорт данных
 
-Данные из Excel-файлов (`import/`) импортируются при инициализации БД:
-- `user_import.xlsx` → users + roles
-- `Tovar.xlsx` → products + categories + manufacturers + suppliers + units
-- `Заказ_import.xlsx` → orders + order_items + order_statuses
-- `Пункты выдачи_import.xlsx` → pickup_points
-- `1.jpg` — `10.jpg` → копируются в uploads/
-- `picture.png` → копируется в uploads/ (заглушка)
+Данные из Excel-файлов (`import/`) импортируются при инициализации БД. Реализуется как Go seed-команда, запускается однократно.
 
-Импорт реализуется как Go CLI-команда или seed-скрипт, запускается однократно.
+### Порядок импорта (с учётом FK-зависимостей)
+
+1. **roles** — извлечь уникальные значения из колонки "Роль сотрудника" в user_import.xlsx. Маппинг: "Администратор" → admin, "Менеджер" → manager, "Авторизированный клиент" → client.
+2. **users** ← user_import.xlsx — ФИО разбивается на last_name / first_name / patronymic. Пароли хешируются через bcrypt перед вставкой в БД.
+3. **categories** — извлечь уникальные из колонки "Категория товара" в Tovar.xlsx.
+4. **manufacturers** — извлечь уникальные из колонки "Производитель" в Tovar.xlsx.
+5. **suppliers** — извлечь уникальные из колонки "Поставщик" в Tovar.xlsx.
+6. **units** — извлечь уникальные из колонки "Единица измерения" в Tovar.xlsx (в текущих данных только "шт.").
+7. **products** ← Tovar.xlsx — article из колонки "Артикул", FK по имени через справочники. Колонка "Фото" → путь к файлу в uploads/.
+8. **pickup_points** ← Пункты выдачи_import.xlsx — файл не имеет заголовка, первая строка — это уже адрес. ID назначается по порядку строк (строка 1 → id=1, строка 2 → id=2, ...).
+9. **order_statuses** — извлечь уникальные из колонки "Статус заказа" в Заказ_import.xlsx.
+10. **orders** ← Заказ_import.xlsx — pickup_point_id = значение из колонки "Адрес пункта выдачи" (это числовой индекс, соответствует id в pickup_points). user_id определяется по ФИО через поиск в users. pickup_code из колонки "Код для получения".
+11. **order_items** — парсинг колонки "Артикул заказа": формат `"АРТИКУЛ1, КОЛ-ВО1, АРТИКУЛ2, КОЛ-ВО2, ..."`. Разбить по запятым, взять пары (артикул, количество), найти product_id по артикулу.
+12. **Фото** — `1.jpg` — `10.jpg` и `picture.png` копируются из `import/` в `backend/uploads/`.
+
+### Обработка ошибок импорта
+- Невалидные даты (например 30.02.2025 в order_date строки 7 заказов) → записать NULL в соответствующее поле, логировать предупреждение.
+- Дублирующиеся артикулы → пропустить дубликат, логировать.
+- Несуществующий артикул в заказе → пропустить позицию, логировать.
