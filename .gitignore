@@ -7,7 +7,6 @@
 *.test
 *.out
 vendor/
-go.sum
 
 # Next.js / Node
 node_modules/
