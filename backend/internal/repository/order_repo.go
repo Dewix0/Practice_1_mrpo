@@ -26,16 +26,20 @@ func scanOrder(row interface {
 	Scan(...interface{}) error
 }) (*model.Order, error) {
 	var o model.Order
+	var orderDate sql.NullString
 	var deliveryDate sql.NullString
 	var userID sql.NullInt64
 	err := row.Scan(
-		&o.ID, &o.OrderDate, &deliveryDate, &o.PickupCode,
+		&o.ID, &orderDate, &deliveryDate, &o.PickupCode,
 		&o.StatusID, &o.StatusName,
 		&o.PickupPointID, &o.PickupAddress,
 		&userID,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if orderDate.Valid {
+		o.OrderDate = orderDate.String
 	}
 	if deliveryDate.Valid {
 		o.DeliveryDate = &deliveryDate.String
