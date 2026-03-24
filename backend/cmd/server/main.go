@@ -6,9 +6,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"shoe-store/internal/database"
 )
 
 func main() {
+	db, err := database.Open("data.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	if err := database.Migrate(db); err != nil {
+		log.Fatal(err)
+	}
+
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
