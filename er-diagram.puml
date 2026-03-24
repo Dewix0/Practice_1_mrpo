@@ -1,0 +1,116 @@
+@startuml ER-диаграмма БД "ООО Обувь"
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classFontName "Times New Roman"
+skinparam defaultFontName "Times New Roman"
+
+!define PK <b><color:#b8860b>PK</color></b>
+!define FK <color:#4169e1>FK</color>
+!define NN <color:#cc0000>NN</color>
+
+entity "roles" as roles {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN name : TEXT <<UNIQUE>>
+}
+
+entity "users" as users {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN login : TEXT <<UNIQUE>>
+  NN password : TEXT
+  last_name : TEXT
+  first_name : TEXT
+  patronymic : TEXT
+  FK NN role_id : INTEGER
+}
+
+entity "categories" as categories {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN name : TEXT <<UNIQUE>>
+}
+
+entity "manufacturers" as manufacturers {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN name : TEXT <<UNIQUE>>
+}
+
+entity "suppliers" as suppliers {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN name : TEXT <<UNIQUE>>
+}
+
+entity "units" as units {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN name : TEXT <<UNIQUE>>
+}
+
+entity "products" as products {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN article : TEXT <<UNIQUE>>
+  NN name : TEXT
+  description : TEXT
+  NN price : REAL <<CHECK >= 0>>
+  NN discount : REAL <<DEFAULT 0>>
+  NN quantity : INTEGER <<DEFAULT 0>>
+  image : TEXT
+  FK NN category_id : INTEGER
+  FK NN manufacturer_id : INTEGER
+  FK NN supplier_id : INTEGER
+  FK NN unit_id : INTEGER
+}
+
+entity "order_statuses" as order_statuses {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN name : TEXT <<UNIQUE>>
+}
+
+entity "pickup_points" as pickup_points {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  NN address : TEXT
+}
+
+entity "orders" as orders {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  order_date : TEXT
+  delivery_date : TEXT
+  pickup_code : TEXT
+  FK NN status_id : INTEGER
+  FK NN pickup_point_id : INTEGER
+  FK user_id : INTEGER
+}
+
+entity "order_items" as order_items {
+  PK id : INTEGER <<AUTOINCREMENT>>
+  --
+  FK NN order_id : INTEGER
+  FK NN product_id : INTEGER
+  NN quantity : INTEGER <<CHECK > 0>>
+}
+
+' === Связи ===
+
+roles ||--o{ users : "1:N"
+users ||--o{ orders : "1:N"
+
+categories ||--o{ products : "1:N"
+manufacturers ||--o{ products : "1:N"
+suppliers ||--o{ products : "1:N"
+units ||--o{ products : "1:N"
+
+order_statuses ||--o{ orders : "1:N"
+pickup_points ||--o{ orders : "1:N"
+
+orders ||--|{ order_items : "1:N\n<<CASCADE>>"
+products ||--o{ order_items : "1:N\n<<RESTRICT>>"
+
+@enduml
